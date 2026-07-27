@@ -21,7 +21,8 @@ api_key <- Sys.getenv("RIOT_API_KEY")
 
 
 # Pulling Needed Data Tables:
-source("Data/Units and Traits.R")
+source("Data/Set 16 Units and Traits.R")
+source("Data/Set 17 Units and Traits.R")
 source("Data/Region Mapping.R")
 
 # Pulling my functions:
@@ -43,4 +44,3 @@ rm(list = lsf.str())
  # to remove valeues
 rm(list = setdiff(ls(), lsf.str()))
 
-install.packages(c("usethis","devtools"))

@@ -20,8 +20,6 @@ library(httr)
 library(curl)
 # Package to read the JSON Data 
 library(jsonlite) 
-# Package to hide Riot API Key 
-library(dotenv) 
 # Helps with the rate limits for the API Calls 
 library(ratelimitr)
 # Help clean up some stuff
@@ -34,7 +32,6 @@ library(stringr)
 # ------------------- Step setting up variables for URLS ----------------------- 
 
 
-load_dot_env()
 api_key <- Sys.getenv("RIOT_API_KEY")
 
 Summoner_Name <- "MozerellaMoose"
@@ -52,7 +49,7 @@ Safe_Limit <- limit_rate(GET, rate(n = 18, period = 1))
 # ------------------- Step 1 Testing for a connection/ Getting PUUID -----------
 
 # Creating URL
-account_url <- paste0(region_route, "/riot/account/v1/accounts/by-riot-id/", Summoner_Name2, "/", tag_line2)
+account_url <- paste0(region_route, "/riot/account/v1/accounts/by-riot-id/", Summoner_Name, "/", tag_line)
 
 # Making a request to get the PUUID (Player Universally Unique IDentifiers)
 resp_account <- GET(account_url, add_headers(`X-Riot-Token` = api_key))
@@ -83,7 +80,7 @@ match_ids <- content(Match_list, as = "parsed")
 
 # Getting matches info
 
-Single_Match_Data <- match_ids[1]
+Single_Match_Data <- match_ids[3]
 
 Single_Match_URL <- paste0(region_route,"/tft/match/v1/matches/",Single_Match_Data)
 
@@ -334,42 +331,68 @@ units_df <- participants_df %>%
   select(-units_itemNames, -items_flat)
 
 
-   
+# Older way of joining and cleaning
+# Units_With_Traits_Final2 <- units_df %>%
+#   #Cleaning up names
+#   mutate(
+#     units_character_id = str_remove(units_character_id, "^TFT\\d+_"),
+#     across(
+#       c(item1, item2, item3),
+#       ~ as.character(.x) %>%
+#         str_remove("^TFT\\d*_Item_") %>%
+#         str_remove("Item$") %>%
+#         str_replace_all("(?<=[a-z])(?=[A-Z])", " "))
+#   ) %>%   select(-c(units_name)) %>% 
+#   rename(Champion= units_character_id) %>% 
+#   left_join(.Trait_Table_Set16, by= c("Champion")) %>% 
+#   arrange(item3,item2,item1) %>% 
+#   rowwise() %>%
+#   mutate(
+#     all_traits = list(c(trait1, trait2, trait3, 
+#                         str_extract(c(item1, item2, item3), ".*(?= Emblem)"))),
+#     
+#     all_traits = list(all_traits %>% str_trim() %>% na.omit() %>% .[. != ""])
+#   ) %>%
+#   ungroup() %>%
+#   unnest_wider(all_traits, names_sep = "") %>%
+#   select(-c(trait1,trait2,trait3)) %>% 
+#   rename_with(~str_replace(., "all_traits", "trait"))
+
+
+# Older way of joining and cleaning
 Units_With_Traits_Final <- units_df %>%
-  #Cleaning up names
+  left_join(.Trait_Table_Set16, by= c("units_character_id")) %>%
   mutate(
-    units_character_id = str_remove(units_character_id, "^TFT\\d+_"),
     across(
       c(item1, item2, item3),
       ~ as.character(.x) %>%
         str_remove("^TFT\\d*_Item_") %>%
         str_remove("Item$") %>%
         str_replace_all("(?<=[a-z])(?=[A-Z])", " "))
-  ) %>%   select(-c(units_name)) %>% 
-  rename(Champion= units_character_id) %>% 
-  left_join(Trait_Table_Set16, by= c("Champion")) %>% 
-  arrange(item3,item2,item1) %>% 
+  ) %>% 
+  arrange(item3,item2,item1) %>%
   rowwise() %>%
   mutate(
-    all_traits = list(c(trait1, trait2, trait3, 
+    all_traits = list(c(trait1, trait2, trait3,
                         str_extract(c(item1, item2, item3), ".*(?= Emblem)"))),
     
     all_traits = list(all_traits %>% str_trim() %>% na.omit() %>% .[. != ""])
   ) %>%
   ungroup() %>%
   unnest_wider(all_traits, names_sep = "") %>%
-  select(-c(trait1,trait2,trait3)) %>% 
-  rename_with(~str_replace(., "all_traits", "trait"))
+  select(-c(trait1,trait2,trait3,units_character_id, units_name, puuid)) %>%
+  rename_with(~str_replace(., "all_traits", "trait")) %>% 
+  relocate(Champion, starts_with("trait"))
 
- 
-   Traits_Grouped <- Units_With_Traits %>% 
+
+Traits_Grouped <- Units_With_Traits_Final %>% 
      group_by(trait1) %>% 
      count()
    
    
-   Traits_Grouped <- Units_With_Traits %>%
+   Traits_Grouped <- Units_With_Traits_Final %>%
      # Pivot the trait columns into a single "Type" and "Value" column
-     pivot_longer(cols = c(trait1, trait2), 
+     pivot_longer(cols = c(starts_with("trait")), 
                   names_to = "Trait_Slot", 
                   values_to = "Trait_Name") %>%
      # Group by both the slot (trait1 vs trait2) and the name
@@ -379,8 +402,8 @@ Units_With_Traits_Final <- units_df %>%
      filter(Trait_Name != "" & !is.na(Trait_Name))
  
    
-   Traits_Total_Count <- Units_With_Traits %>%
-     pivot_longer(cols = c(trait1, trait2), values_to = "Trait_Name") %>%
+   Traits_Total_Count <- Units_With_Traits_Final %>%
+     pivot_longer(cols = c(starts_with("trait")), values_to = "Trait_Name") %>%
      count(Trait_Name) %>%
      filter(Trait_Name != "" & !is.na(Trait_Name))
    
@@ -391,7 +414,7 @@ Units_With_Traits_Final <- units_df %>%
  # Placement and maybe count of traits? And also add a case when for traits and
  # now I need to add maybe a traits 4 5 and 6 incase their are multiple
  # and i can delete the trait columns incase they aren't used because who wants
-   # to see an additional 4 5 and 6 that would be annoyinh
+ # to see an additional 4 5 and 6 that would be annoyinh
  
 
    test_units_df <- tibble(
@@ -495,4 +518,5 @@ Units_With_Traits_Final <- units_df %>%
    
    
    Pull_Match_IDs(api_key)   
+   
    
