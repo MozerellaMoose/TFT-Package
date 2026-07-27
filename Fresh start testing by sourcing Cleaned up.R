@@ -8,8 +8,6 @@ library(httr)
 library(curl)
 # Package to read the JSON Data 
 library(jsonlite) 
-# Package to hide Riot API Key 
-library(dotenv) 
 # Helps with the rate limits for the API Calls 
 library(ratelimitr)
 # Help clean up some stuff
@@ -18,8 +16,6 @@ library(stringr)
 
 
 # Api Key
-
-load_dot_env()
 api_key <- Sys.getenv("RIOT_API_KEY")
 
 
