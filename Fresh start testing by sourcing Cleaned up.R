@@ -15,9 +15,16 @@ library(stringr)
 #
 
 
+
+
+
+
+# New way to save API Key?
+source("Functions/Save_Api_Key.R")
+#Riot Games Website: https://developer.riotgames.com/
+Save_Api_Key("")
 # Api Key
 api_key <- Sys.getenv("RIOT_API_KEY")
-
 
 
 # Pulling Needed Data Tables:
