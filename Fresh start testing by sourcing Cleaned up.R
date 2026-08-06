@@ -22,10 +22,10 @@ library(stringr)
 # New way to save API Key?
 source("Functions/Save_Api_Key.R")
 #Riot Games Website: https://developer.riotgames.com/
-Save_Api_Key("")
-# Api Key
-api_key <- Sys.getenv("RIOT_API_KEY")
 
+
+# Api Key
+api_key <- Save_Api_Key()
 
 # Pulling Needed Data Tables:
 source("Data/Set 16 Units and Traits.R")
@@ -43,7 +43,9 @@ source("Functions/Pull Match IDs.R")
 user_data <- Username_Info("MozerellaMoose") 
 
 Summoner_Name <- user_data[["username"]]
-Pull_Match_IDs(api_key, NULL, NULL, 121)
+#PUUID <- 'YmWjg91S4JeFirU7yreWmB-5XpjafxBfNqV0AbUxrJj8K9LNEk2VNiuRLKO-STfiA0lh2WOmrzyGVg'
+
+Pull_Match_IDs(n_matches =100)
 
 # In case I want to remove functions and values
 
