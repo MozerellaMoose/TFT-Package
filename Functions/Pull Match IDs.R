@@ -23,7 +23,10 @@
   # Using the passed-in safe_limit and api_key
   resp <- .Safe_Limit(url, add_headers(`X-Riot-Token` = api_key))
   
-  if (status_code(resp) != 200) return(NULL)
+  if (status_code(resp) != 200) {
+  warning(paste("Request failed at chunk", i, "status:", status_code(resp)))
+    return(NULL)
+  }
   
   ids <- content(resp, as = "parsed")
   return(as.character(ids))
@@ -59,9 +62,9 @@ Pull_Match_IDs <- function( api_key = NULL,
   #-------------- Defaulting data in case user forgets -------------------------
   
   if (is.null(puuid)) {
-    if(exists("puuid", envir = .GlobalEnv)) {
-      message("Using puuid from Global Environment")
-      puuid <- get("puuid", envir = .GlobalEnv)
+    if(!is.null(.tft_cache$user$puuid)) {
+      message("Using puuid from UsernameInfo")
+      puuid <- .tft_cache$user$puuid
     } else {
     message("No puuid input auto inputting one")
     puuid <- "0mbvacPnNM_aBqXhvMrCbjbvnoxPsUljGpmDR6JsLS_bwcJAo7dO_pS5wIXCNt8cbgf8DeH7jUn_-A"
@@ -69,9 +72,9 @@ Pull_Match_IDs <- function( api_key = NULL,
   }
   
   if (is.null(region_route)) {
-    if(exists("Region", envir = .GlobalEnv)) {
-      message("Using Region from Global Environment")
-      region_route <- get(".region_url", envir = .GlobalEnv)
+    if(!is.null(.tft_cache$user$region_url)) {
+      message("Using region_route from UsernameInfo")
+      region_route <- .tft_cache$user$region_url
     } else {
     message("No region_route input auto inputting NA")
     region_route <- "https://americas.api.riotgames.com"
@@ -134,7 +137,6 @@ Pull_Match_IDs <- function( api_key = NULL,
   # Trim to n_matches if more returned
   match_ids <- match_ids[1:min(length(match_ids), n_matches)]
   
-  n_found <- length(match_ids)
   
   if (length(match_ids) == 0 || (length(match_ids) == 1 && is.na(match_ids[1]))) {
     

@@ -43,13 +43,17 @@ Username_Info <- function(Username,
   ))
   
   # Storing these values for later use
-  return(list(
+  Information <-(list(
     username = Username,
     tagline = Tagline,
     region = Region,
     puuid = puuid,
     region_url = region_url
   ))
+  
+  .tft_cache$user <- Information
+  
+  return(Information)
   
 # I'd prefer to return in global environment but that's apparently a no no
 }
