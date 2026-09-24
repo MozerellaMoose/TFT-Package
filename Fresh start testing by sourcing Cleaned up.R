@@ -44,7 +44,7 @@ source("Functions/Cache.R")
 
 # Testing function Number 2
 
-source("Function/Pull Match IDs Updated.R")
+source("Functions/Pull Match IDs Updated.R")
 
 # Testing Functions
 
@@ -54,6 +54,10 @@ Summoner_Name <- user_data[["username"]]
 #PUUID <- 'YmWjg91S4JeFirU7yreWmB-5XpjafxBfNqV0AbUxrJj8K9LNEk2VNiuRLKO-STfiA0lh2WOmrzyGVg'
 
 Pull_Match_IDs(n_matches =100)
+
+# Testing New Match Function
+
+Test <- Pull_Match_Data(n_matches =75)
 
 # In case I want to remove functions and values
 

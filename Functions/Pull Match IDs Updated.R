@@ -5,11 +5,11 @@
 
 
 
-#---------------- Creating a safe limit so Riot API doesn't get angry ----------
+# Creating a safe limit so Riot API doesn't get angry
 .Safe_Limit <- limit_rate(GET, rate(n = 18, period = 1))
 
 
-#---------------- Creating request for data ------------------------------------
+# Creating request for data 
 .get_json <- function(url, api_key, label) {
   resp <- .Safe_Limit(url, add_headers(`X-Riot-Token` = api_key))
   
@@ -22,7 +22,7 @@
 }
 
 
-#---------------- Retrieving API Data in chunks --------------------------------
+# Retrieving API Data in chunks 
 
 .retrieve_chunk <- function(i, puuid, region_route, api_key, chunk_size) {
   start <- (i - 1) * chunk_size
@@ -39,7 +39,7 @@
 }
 
 
-#---------------- Making the function so it doesn't print so many lines --------
+# Making the function so it doesn't print so many lines
 print.riot_match_list <- function(x, ...) {
   n_total <- length(x)
   n_show <- 10
@@ -58,15 +58,22 @@ print.riot_match_list <- function(x, ...) {
 }
 
 
-# Pull Match IDs function
+##----------------- Step 1: Pull Match IDs function ----------------------------
+
+# This pulls the actual match ID's which look like this: NA1_5645890229
+# In Step 2 we actually pull the match details
 
 Pull_Match_IDs <- function( api_key = NULL,
                             puuid = NULL,
                             region_route = NULL,
                             n_matches = NULL) {
   
-#----------------- Defaulting data in case user forgets ------------------------
+# User can input Data into the function,
+# If they don't the function will look for the puuid in the stored cache
+# If it doesn't have either of those defaults to America a high level streamer's
+# information
   
+  # Puuid
   if (is.null(puuid)) {
     if(!is.null(.tft_cache$user$puuid)) {
       message("Using puuid from UsernameInfo")
@@ -77,6 +84,7 @@ Pull_Match_IDs <- function( api_key = NULL,
     }
   }
   
+  # Region Route 
   if (is.null(region_route)) {
     if(!is.null(.tft_cache$user$region_url)) {
       message("Using region_route from UsernameInfo")
@@ -87,7 +95,7 @@ Pull_Match_IDs <- function( api_key = NULL,
     }
   }
   
-  
+  # Api Key (can't default that one)
   if (is.null(api_key)) {
     api_key <- Sys.getenv("RIOT_API_KEY")
     if (api_key == "") {
@@ -96,7 +104,7 @@ Pull_Match_IDs <- function( api_key = NULL,
     }
   }
   
-  
+  # Defaulting to 10 matches
   if (is.null(n_matches)) {
     message("Number of matches not selected, auto defaulting to 10 most recent")
     n_matches <- 10
@@ -106,6 +114,7 @@ Pull_Match_IDs <- function( api_key = NULL,
     stop("n_matches must be a positive number.")
   }
   
+  # Outputting everything in a nice box
   .Fancy_Output(c(
     "Starting Match Pull",
     paste("PUUID:", puuid),
@@ -165,7 +174,9 @@ Pull_Match_IDs <- function( api_key = NULL,
   
 }
 
-#----------------- Fetching one match's detail ---------------------------------
+#----------------- Step 2: Fetching the match details --------------------------
+
+# Fetching one match's detail
 
 .fetch_one_match <- function(match_id, region_route, api_key) {
   
@@ -180,11 +191,28 @@ Pull_Match_IDs <- function( api_key = NULL,
 .flatten_match <- function(match, match_id) {
   if (is.null(match)) return(NULL)
   
-  tibble(data = match$info$participants) %>%
+  players  <- match$info$participants
+  queue_id <- if (is.null(match$info$queue_id)) NA else match$info$queue_id 
+  
+  game_mode <- case_when(
+    length(players) == 1 ~ "Tockers Trials",
+    queue_id == 1090     ~ "Normal",
+    queue_id == 1100     ~ "Ranked",
+    queue_id == 1110     ~ "Tutorial",
+    queue_id == 1130     ~ "Hyper Roll",
+    queue_id == 1160     ~ "Double Up",
+    queue_id == 1210     ~ "Choncc's Treasure",
+    queue_id == 1220     ~ "Tockers Trials",
+    TRUE                 ~ "Other"
+  )
+  
+  tibble(data = players) %>%
     unnest_wider(data) %>%
-    mutate(match_id = match_id, .before = 1)
+    mutate(match_id  = match_id,
+           game_mode = game_mode,
+           queue_id  = queue_id,
+           .before   = 1)
 }
-
 
 
 #----------------- Match IDs and match data in one call ------------------------
@@ -195,7 +223,7 @@ Pull_Match_Data <- function( api_key = NULL,
                              n_matches = NULL) {
   
 
-#----------------- Step 1: reuse everything above ------------------------------
+# Using the code created in step one to pull match ID's 
   
   match_ids <- Pull_Match_IDs(api_key      = api_key,
                               puuid        = puuid,
@@ -220,7 +248,8 @@ Pull_Match_Data <- function( api_key = NULL,
   
   out <- map2(matches, match_ids, .flatten_match) %>%
     compact() %>%
-    bind_rows()
+    bind_rows() %>% 
+    mutate(game_number = match(match_id, match_ids), .before = 1)
   
   if (nrow(out) == 0) {
     .Fancy_Output(c(
